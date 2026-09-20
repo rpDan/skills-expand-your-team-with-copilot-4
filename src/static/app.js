@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentDay = "";
   let currentTimeRange = "";
   let sharedActivityName = "";
+  let isSharedActivityPrefillActive = false;
 
   // Authentication state
   let currentUser = null;
@@ -74,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sharedActivityName) {
       searchQuery = sharedActivityName;
       searchInput.value = sharedActivityName;
+      isSharedActivityPrefillActive = true;
     }
   }
 
@@ -316,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getActivityShareUrl(activityName) {
-    const shareUrl = new URL("/static/index.html", window.location.origin);
+    const shareUrl = new URL(window.location.pathname, window.location.origin);
     shareUrl.searchParams.set("activity", activityName);
     return shareUrl.toString();
   }
@@ -615,7 +617,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Check if there are any results
     if (Object.keys(filteredActivities).length === 0) {
       const emptyStateMessage =
-        sharedActivityName && searchQuery === sharedActivityName
+        isSharedActivityPrefillActive
         ? `Try searching for "${sharedActivityName}" in a different filter view.`
         : "Try adjusting your search or filter criteria";
 
@@ -758,12 +760,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Event listeners for search and filter
   searchInput.addEventListener("input", (event) => {
     searchQuery = event.target.value;
+    isSharedActivityPrefillActive = false;
     displayFilteredActivities();
   });
 
   searchButton.addEventListener("click", (event) => {
     event.preventDefault();
     searchQuery = searchInput.value;
+    isSharedActivityPrefillActive = false;
     displayFilteredActivities();
   });
 
