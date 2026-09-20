@@ -318,7 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getActivityShareUrl(activityName) {
-    const shareUrl = new URL(window.location.pathname, window.location.origin);
+    const shareUrl = new URL(window.location.href);
+    shareUrl.hash = "";
     shareUrl.searchParams.set("activity", activityName);
     return shareUrl.toString();
   }
@@ -621,6 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `Try searching for "${sharedActivityName}" in a different filter view.`
         : "Try adjusting your search or filter criteria";
 
+      activitiesList.innerHTML = "";
       activitiesList.appendChild(createNoResultsState(emptyStateMessage));
       return;
     }
