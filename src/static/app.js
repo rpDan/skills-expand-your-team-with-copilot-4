@@ -660,18 +660,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
-      <div class="share-actions">
+      <div class="share-actions" role="group" aria-label="Share ${name}">
         <span class="share-label">Share:</span>
-        <button class="share-button" data-activity="${name}" data-platform="facebook" type="button">
+        <button class="share-button" data-activity="${name}" data-platform="facebook" type="button" aria-label="Share ${name} on Facebook">
           Facebook
         </button>
-        <button class="share-button" data-activity="${name}" data-platform="x" type="button">
+        <button class="share-button" data-activity="${name}" data-platform="x" type="button" aria-label="Share ${name} on X">
           X
         </button>
-        <button class="share-button" data-activity="${name}" data-platform="email" type="button">
+        <button class="share-button" data-activity="${name}" data-platform="email" type="button" aria-label="Share ${name} by email">
           Email
         </button>
-        <button class="share-button share-button-secondary" data-activity="${name}" data-platform="copy" type="button">
+        <button class="share-button share-button-secondary" data-activity="${name}" data-platform="copy" type="button" aria-label="Copy share link for ${name}">
           Copy Link
         </button>
       </div>
