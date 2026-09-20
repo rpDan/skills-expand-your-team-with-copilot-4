@@ -32,6 +32,26 @@
   --info-light: #d1ecf1;
 }
 
+body[data-theme="dark"] {
+  --primary: #2e3a8c;
+  --primary-light: #5a67b8;
+  --primary-dark: #1f275e;
+  --secondary: #ff8f33;
+  --secondary-light: #ffb067;
+  --secondary-dark: #e56a00;
+  --background: #111827;
+  --surface: #1f2937;
+  --text-primary: #e5e7eb;
+  --text-secondary: #cbd5e1;
+  --border: #374151;
+  --border-light: #4b5563;
+  --border-focus: #6b7280;
+  --success-light: #1f3a2a;
+  --warning-light: #4b3a15;
+  --error-light: #4a1f24;
+  --info-light: #1f3b4a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -265,6 +285,43 @@ section h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.share-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.share-label {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.share-button {
+  padding: 4px 8px;
+  border-radius: 14px;
+  font-size: 0.72rem;
+  background-color: var(--primary-light);
+}
+
+.share-button:hover {
+  background-color: var(--primary);
+}
+
+.share-button-secondary {
+  background-color: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.share-button-secondary:hover {
+  background-color: var(--border-light);
 }
 
 /* Buttons */
@@ -621,6 +678,9 @@ footer {
   position: absolute;
   top: 10px;
   right: 15px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 #user-status {

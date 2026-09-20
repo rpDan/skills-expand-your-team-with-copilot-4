@@ -25,6 +25,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
+  const themeToggleButton = document.getElementById("theme-toggle");
+  const themeIcon = document.getElementById("theme-icon");
+  const themeLabel = document.getElementById("theme-label");
+  const THEME_STORAGE_KEY = "preferredTheme";
+  const prefersDarkMediaQuery =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
+  let followsSystemTheme = false;
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -42,6 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentDay = "";
   let currentTimeRange = "";
   let currentDifficulty = "unspecified";
+  let sharedActivityName = "";
+  let isSharedActivityPrefillActive = false;
 
   // Authentication state
   let currentUser = null;
@@ -74,6 +85,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (activeDifficultyFilter) {
       currentDifficulty = activeDifficultyFilter.dataset.difficulty;
     }
+  }
+
+  function initializeSharedActivity() {
+    const urlParams = new URLSearchParams(window.location.search);
+    sharedActivityName = urlParams.get("activity") || "";
+
+    if (sharedActivityName) {
+      updateSearchQuery(sharedActivityName, true);
+    }
+  }
+
+  function updateSearchQuery(value, keepSharedPrefillActive = false) {
+    searchInput.value = value;
+    searchQuery = value;
+    isSharedActivityPrefillActive = keepSharedPrefillActive;
   }
 
   // Function to set day filter
@@ -120,6 +146,111 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (error) {
         console.error("Error parsing saved user", error);
         logout(); // Clear invalid data
+      }
+
+      function updateThemeToggle(theme) {
+        if (!themeIcon || !themeLabel || !themeToggleButton) {
+          return;
+        }
+
+        if (theme === "dark") {
+          themeIcon.textContent = "☀️";
+          themeLabel.textContent = "Light mode";
+          themeToggleButton.setAttribute("aria-pressed", "true");
+          themeToggleButton.setAttribute("aria-label", "Switch to light mode");
+        } else {
+          themeIcon.textContent = "🌙";
+          themeLabel.textContent = "Dark mode";
+          themeToggleButton.setAttribute("aria-pressed", "false");
+          themeToggleButton.setAttribute("aria-label", "Switch to dark mode");
+        }
+      }
+
+      function applyTheme(theme) {
+        document.body.dataset.theme = theme;
+        updateThemeToggle(theme);
+      }
+
+      function handleSystemThemeChange(event) {
+        if (followsSystemTheme) {
+          applyTheme(event.matches ? "dark" : "light");
+        }
+      }
+
+      function addSystemThemeListener() {
+        if (!prefersDarkMediaQuery) {
+          return;
+        }
+
+        if (typeof prefersDarkMediaQuery.addEventListener === "function") {
+          prefersDarkMediaQuery.addEventListener("change", handleSystemThemeChange);
+        } else if (typeof prefersDarkMediaQuery.addListener === "function") {
+          prefersDarkMediaQuery.addListener(handleSystemThemeChange);
+        }
+      }
+
+      function removeSystemThemeListener() {
+        if (!prefersDarkMediaQuery) {
+          return;
+        }
+
+        if (typeof prefersDarkMediaQuery.removeEventListener === "function") {
+          prefersDarkMediaQuery.removeEventListener(
+            "change",
+            handleSystemThemeChange
+          );
+        } else if (typeof prefersDarkMediaQuery.removeListener === "function") {
+          prefersDarkMediaQuery.removeListener(handleSystemThemeChange);
+        }
+      }
+
+      function setTheme(theme) {
+        applyTheme(theme);
+        removeSystemThemeListener();
+
+        const systemTheme =
+          prefersDarkMediaQuery && prefersDarkMediaQuery.matches ? "dark" : "light";
+
+        if (prefersDarkMediaQuery && theme === systemTheme) {
+          followsSystemTheme = true;
+          addSystemThemeListener();
+          try {
+            localStorage.removeItem(THEME_STORAGE_KEY);
+          } catch (error) {
+            console.warn("Could not clear theme preference:", error);
+          }
+          return;
+        }
+
+        followsSystemTheme = false;
+        try {
+          localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } catch (error) {
+          console.warn("Could not save theme preference:", error);
+        }
+      }
+
+      function initializeTheme() {
+        let savedTheme = null;
+        try {
+          savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        } catch (error) {
+          console.warn("Could not read saved theme preference:", error);
+        }
+        followsSystemTheme = savedTheme !== "dark" && savedTheme !== "light";
+        const prefersDarkMode = prefersDarkMediaQuery
+          ? prefersDarkMediaQuery.matches
+          : false;
+        const initialTheme =
+          savedTheme === "dark" || (followsSystemTheme && prefersDarkMode)
+            ? "dark"
+            : "light";
+        applyTheme(initialTheme);
+
+        removeSystemThemeListener();
+        if (followsSystemTheme) {
+          addSystemThemeListener();
+        }
       }
     }
 
@@ -249,6 +380,13 @@ document.addEventListener("DOMContentLoaded", () => {
   logoutButton.addEventListener("click", logout);
   closeLoginModal.addEventListener("click", closeLoginModalHandler);
 
+  if (themeToggleButton) {
+    themeToggleButton.addEventListener("click", () => {
+      const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(nextTheme);
+    });
+  }
+
   // Close login modal when clicking outside
   window.addEventListener("click", (event) => {
     if (event.target === loginModal) {
@@ -312,6 +450,151 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Fallback to the string format if schedule_details isn't available
     return details.schedule;
+  }
+
+  function getActivityShareUrl(activityName) {
+    const shareUrl = new URL(window.location.pathname, window.location.origin);
+    shareUrl.searchParams.set("activity", activityName);
+    return shareUrl.toString();
+  }
+
+  function getActivityShareText(activityName, details) {
+    return `Check out ${activityName} at Mergington High School! ${details.description}`;
+  }
+
+  function getShareTarget(platform, activityName, details) {
+    const shareUrl = getActivityShareUrl(activityName);
+    const shareText = getActivityShareText(activityName, details);
+
+    if (platform === "facebook") {
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    }
+
+    if (platform === "x") {
+      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        shareText
+      )}&url=${encodeURIComponent(shareUrl)}`;
+    }
+
+    if (platform === "email") {
+      return `mailto:?subject=${encodeURIComponent(
+        `Mergington activity: ${activityName}`
+      )}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+    }
+
+    return shareUrl;
+  }
+
+  async function copyShareLink(activityName) {
+    const shareUrl = getActivityShareUrl(activityName);
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const temporaryInput = document.createElement("textarea");
+        temporaryInput.value = shareUrl;
+        temporaryInput.setAttribute("readonly", "");
+        temporaryInput.style.position = "absolute";
+        temporaryInput.style.left = "-9999px";
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(temporaryInput);
+      }
+
+      showMessage(`Share link copied for ${activityName}.`, "success");
+    } catch (error) {
+      showMessage("Unable to copy the share link. Please try again.", "error");
+      console.error("Error copying share link:", error);
+    }
+  }
+
+  function createNoResultsState(message) {
+    const emptyState = document.createElement("div");
+    emptyState.className = "no-results";
+
+    const title = document.createElement("h4");
+    title.textContent = "No activities found";
+
+    const description = document.createElement("p");
+    description.textContent = message;
+
+    emptyState.appendChild(title);
+    emptyState.appendChild(description);
+    return emptyState;
+  }
+
+  function createShareButton(activityName, platform, label, ariaLabel, extraClass = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `share-button ${extraClass}`.trim();
+    button.dataset.activity = activityName;
+    button.dataset.platform = platform;
+    button.textContent = label;
+    button.setAttribute("aria-label", ariaLabel);
+    return button;
+  }
+
+  function createShareActions(activityName) {
+    const shareActions = document.createElement("div");
+    shareActions.className = "share-actions";
+    shareActions.setAttribute("role", "group");
+    shareActions.setAttribute("aria-label", `Share ${activityName}`);
+
+    const shareLabel = document.createElement("span");
+    shareLabel.className = "share-label";
+    shareLabel.textContent = "Share:";
+
+    shareActions.appendChild(shareLabel);
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "facebook",
+        "Facebook",
+        `Share ${activityName} on Facebook`
+      )
+    );
+    shareActions.appendChild(
+      createShareButton(activityName, "x", "X", `Share ${activityName} on X`)
+    );
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "email",
+        "Email",
+        `Share ${activityName} by email`
+      )
+    );
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "copy",
+        "Copy Link",
+        `Copy share link for ${activityName}`,
+        "share-button-secondary"
+      )
+    );
+
+    return shareActions;
+  }
+
+  function handleShareAction(shareButton) {
+    const { activity, platform } = shareButton.dataset;
+    const activityDetails = allActivities[activity];
+
+    if (!activityDetails) {
+      showMessage("This activity is no longer available to share.", "error");
+      return;
+    }
+
+    if (platform === "copy") {
+      copyShareLink(activity);
+      return;
+    }
+
+    const shareTarget = getShareTarget(platform, activity, activityDetails);
+    window.open(shareTarget, "_blank", "noopener,noreferrer,width=640,height=480");
   }
 
   // Function to determine activity type (this would ideally come from backend)
@@ -478,12 +761,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Check if there are any results
     if (Object.keys(filteredActivities).length === 0) {
-      activitiesList.innerHTML = `
-        <div class="no-results">
-          <h4>No activities found</h4>
-          <p>Try adjusting your search or filter criteria</p>
-        </div>
-      `;
+      const emptyStateMessage =
+        isSharedActivityPrefillActive
+        ? `Try searching for "${sharedActivityName}" in a different filter view.`
+        : "Try adjusting your search or filter criteria";
+
+      activitiesList.innerHTML = "";
+      activitiesList.appendChild(createNoResultsState(emptyStateMessage));
       return;
     }
 
@@ -602,6 +886,14 @@ document.addEventListener("DOMContentLoaded", () => {
       button.addEventListener("click", handleUnregister);
     });
 
+    const shareActions = createShareActions(name);
+    const activityActions = activityCard.querySelector(".activity-card-actions");
+    if (activityActions) {
+      activityActions.before(shareActions);
+    } else {
+      activityCard.appendChild(shareActions);
+    }
+
     // Add click handler for register button (only when authenticated)
     if (currentUser) {
       const registerButton = activityCard.querySelector(".register-button");
@@ -617,14 +909,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event listeners for search and filter
   searchInput.addEventListener("input", (event) => {
-    searchQuery = event.target.value;
+    updateSearchQuery(event.target.value);
     displayFilteredActivities();
   });
 
   searchButton.addEventListener("click", (event) => {
     event.preventDefault();
-    searchQuery = searchInput.value;
+    updateSearchQuery(searchInput.value);
     displayFilteredActivities();
+  });
+
+  activitiesList.addEventListener("click", (event) => {
+    const shareButton = event.target.closest(".share-button");
+    if (!shareButton || !activitiesList.contains(shareButton)) {
+      return;
+    }
+
+    handleShareAction(shareButton);
   });
 
   // Add event listeners to category filter buttons
@@ -900,7 +1201,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Initialize app
+  initializeTheme();
   checkAuthentication();
   initializeFilters();
+  initializeSharedActivity();
   fetchActivities();
 });
