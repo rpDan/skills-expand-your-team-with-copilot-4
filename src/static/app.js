@@ -28,6 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeIcon = document.getElementById("theme-icon");
   const themeLabel = document.getElementById("theme-label");
   const THEME_STORAGE_KEY = "preferredTheme";
+  const prefersDarkMediaQuery =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
+  let followsSystemTheme = false;
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -134,14 +139,53 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      function setTheme(theme) {
+      function applyTheme(theme) {
         document.body.dataset.theme = theme;
+        updateThemeToggle(theme);
+      }
+
+      function handleSystemThemeChange(event) {
+        if (followsSystemTheme) {
+          applyTheme(event.matches ? "dark" : "light");
+        }
+      }
+
+      function addSystemThemeListener() {
+        if (!prefersDarkMediaQuery) {
+          return;
+        }
+
+        if (typeof prefersDarkMediaQuery.addEventListener === "function") {
+          prefersDarkMediaQuery.addEventListener("change", handleSystemThemeChange);
+        } else if (typeof prefersDarkMediaQuery.addListener === "function") {
+          prefersDarkMediaQuery.addListener(handleSystemThemeChange);
+        }
+      }
+
+      function removeSystemThemeListener() {
+        if (!prefersDarkMediaQuery) {
+          return;
+        }
+
+        if (typeof prefersDarkMediaQuery.removeEventListener === "function") {
+          prefersDarkMediaQuery.removeEventListener(
+            "change",
+            handleSystemThemeChange
+          );
+        } else if (typeof prefersDarkMediaQuery.removeListener === "function") {
+          prefersDarkMediaQuery.removeListener(handleSystemThemeChange);
+        }
+      }
+
+      function setTheme(theme) {
+        followsSystemTheme = false;
+        removeSystemThemeListener();
+        applyTheme(theme);
         try {
           localStorage.setItem(THEME_STORAGE_KEY, theme);
         } catch (error) {
           console.warn("Could not save theme preference:", error);
         }
-        updateThemeToggle(theme);
       }
 
       function initializeTheme() {
@@ -151,15 +195,20 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
           console.warn("Could not read saved theme preference:", error);
         }
-        const prefersDarkMode =
-          typeof window.matchMedia === "function" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        followsSystemTheme = savedTheme !== "dark" && savedTheme !== "light";
+        const prefersDarkMode = prefersDarkMediaQuery
+          ? prefersDarkMediaQuery.matches
+          : false;
         const initialTheme =
-          savedTheme === "dark" || (savedTheme !== "light" && prefersDarkMode)
+          savedTheme === "dark" || (followsSystemTheme && prefersDarkMode)
             ? "dark"
             : "light";
-        document.body.dataset.theme = initialTheme;
-        updateThemeToggle(initialTheme);
+        applyTheme(initialTheme);
+
+        removeSystemThemeListener();
+        if (followsSystemTheme) {
+          addSystemThemeListener();
+        }
       }
     }
 
