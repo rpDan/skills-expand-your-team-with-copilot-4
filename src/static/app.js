@@ -117,27 +117,38 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       function updateThemeToggle(theme) {
-        if (!themeIcon || !themeLabel) {
+        if (!themeIcon || !themeLabel || !themeToggleButton) {
           return;
         }
 
         if (theme === "dark") {
           themeIcon.textContent = "☀️";
           themeLabel.textContent = "Light mode";
+          themeToggleButton.setAttribute("aria-pressed", "true");
         } else {
           themeIcon.textContent = "🌙";
           themeLabel.textContent = "Dark mode";
+          themeToggleButton.setAttribute("aria-pressed", "false");
         }
       }
 
       function setTheme(theme) {
         document.body.dataset.theme = theme;
-        localStorage.setItem(THEME_STORAGE_KEY, theme);
+        try {
+          localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } catch (error) {
+          console.warn("Could not save theme preference:", error);
+        }
         updateThemeToggle(theme);
       }
 
       function initializeTheme() {
-        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        let savedTheme = null;
+        try {
+          savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        } catch (error) {
+          console.warn("Could not read saved theme preference:", error);
+        }
         const initialTheme = savedTheme === "dark" ? "dark" : "light";
         document.body.dataset.theme = initialTheme;
         updateThemeToggle(initialTheme);
