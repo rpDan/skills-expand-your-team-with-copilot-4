@@ -267,6 +267,43 @@ section h3 {
   align-items: center;
 }
 
+.share-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.share-label {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.share-button {
+  padding: 4px 8px;
+  border-radius: 14px;
+  font-size: 0.72rem;
+  background-color: var(--primary-light);
+}
+
+.share-button:hover {
+  background-color: var(--primary);
+}
+
+.share-button-secondary {
+  background-color: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.share-button-secondary:hover {
+  background-color: var(--border-light);
+}
+
 /* Buttons */
 .register-button {
   background: linear-gradient(145deg, var(--secondary), var(--secondary-dark));

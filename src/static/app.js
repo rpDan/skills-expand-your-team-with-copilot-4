@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let searchQuery = "";
   let currentDay = "";
   let currentTimeRange = "";
+  let sharedActivityName = "";
 
   // Authentication state
   let currentUser = null;
@@ -63,6 +64,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const activeTimeFilter = document.querySelector(".time-filter.active");
     if (activeTimeFilter) {
       currentTimeRange = activeTimeFilter.dataset.time;
+    }
+  }
+
+  function initializeSharedActivity() {
+    const urlParams = new URLSearchParams(window.location.search);
+    sharedActivityName = urlParams.get("activity") || "";
+
+    if (sharedActivityName) {
+      searchQuery = sharedActivityName;
+      searchInput.value = sharedActivityName;
     }
   }
 
@@ -304,6 +315,98 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, (character) => {
+      const entities = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+
+      return entities[character];
+    });
+  }
+
+  function getActivityShareUrl(activityName) {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.search = "";
+    shareUrl.hash = "";
+    shareUrl.searchParams.set("activity", activityName);
+    return shareUrl.toString();
+  }
+
+  function getActivityShareText(activityName, details) {
+    return `Check out ${activityName} at Mergington High School! ${details.description}`;
+  }
+
+  function getShareTarget(platform, activityName, details) {
+    const shareUrl = getActivityShareUrl(activityName);
+    const shareText = getActivityShareText(activityName, details);
+
+    if (platform === "facebook") {
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    }
+
+    if (platform === "x") {
+      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        shareText
+      )}&url=${encodeURIComponent(shareUrl)}`;
+    }
+
+    if (platform === "email") {
+      return `mailto:?subject=${encodeURIComponent(
+        `Mergington activity: ${activityName}`
+      )}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+    }
+
+    return shareUrl;
+  }
+
+  async function copyShareLink(activityName) {
+    const shareUrl = getActivityShareUrl(activityName);
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const temporaryInput = document.createElement("textarea");
+        temporaryInput.value = shareUrl;
+        temporaryInput.setAttribute("readonly", "");
+        temporaryInput.style.position = "absolute";
+        temporaryInput.style.left = "-9999px";
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(temporaryInput);
+      }
+
+      showMessage(`Share link copied for ${activityName}.`, "success");
+    } catch (error) {
+      showMessage("Unable to copy the share link. Please try again.", "error");
+      console.error("Error copying share link:", error);
+    }
+  }
+
+  function handleShareAction(event) {
+    const { activity, platform } = event.currentTarget.dataset;
+    const activityDetails = allActivities[activity];
+
+    if (!activityDetails) {
+      showMessage("This activity is no longer available to share.", "error");
+      return;
+    }
+
+    if (platform === "copy") {
+      copyShareLink(activity);
+      return;
+    }
+
+    const shareTarget = getShareTarget(platform, activity, activityDetails);
+    window.open(shareTarget, "_blank", "noopener,noreferrer,width=640,height=480");
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -457,10 +560,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Check if there are any results
     if (Object.keys(filteredActivities).length === 0) {
+      const emptyStateMessage =
+        sharedActivityName && searchQuery === sharedActivityName
+        ? `Try searching for "${escapeHtml(sharedActivityName)}" in a different filter view.`
+        : "Try adjusting your search or filter criteria";
+
       activitiesList.innerHTML = `
         <div class="no-results">
           <h4>No activities found</h4>
-          <p>Try adjusting your search or filter criteria</p>
+          <p>${emptyStateMessage}</p>
         </div>
       `;
       return;
@@ -552,6 +660,21 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
+      <div class="share-actions">
+        <span class="share-label">Share:</span>
+        <button class="share-button" data-activity="${name}" data-platform="facebook" type="button">
+          Facebook
+        </button>
+        <button class="share-button" data-activity="${name}" data-platform="x" type="button">
+          X
+        </button>
+        <button class="share-button" data-activity="${name}" data-platform="email" type="button">
+          Email
+        </button>
+        <button class="share-button share-button-secondary" data-activity="${name}" data-platform="copy" type="button">
+          Copy Link
+        </button>
+      </div>
       <div class="activity-card-actions">
         ${
           currentUser
@@ -575,6 +698,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const deleteButtons = activityCard.querySelectorAll(".delete-participant");
     deleteButtons.forEach((button) => {
       button.addEventListener("click", handleUnregister);
+    });
+
+    const shareButtons = activityCard.querySelectorAll(".share-button");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", handleShareAction);
     });
 
     // Add click handler for register button (only when authenticated)
@@ -864,5 +992,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize app
   checkAuthentication();
   initializeFilters();
+  initializeSharedActivity();
   fetchActivities();
 });
