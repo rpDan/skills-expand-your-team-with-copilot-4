@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
+  const themeToggleButton = document.getElementById("theme-toggle");
+  const themeIcon = document.getElementById("theme-icon");
+  const themeLabel = document.getElementById("theme-label");
+  const THEME_STORAGE_KEY = "preferredTheme";
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -110,6 +114,33 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (error) {
         console.error("Error parsing saved user", error);
         logout(); // Clear invalid data
+      }
+
+      function updateThemeToggle(theme) {
+        if (!themeIcon || !themeLabel) {
+          return;
+        }
+
+        if (theme === "dark") {
+          themeIcon.textContent = "☀️";
+          themeLabel.textContent = "Light mode";
+        } else {
+          themeIcon.textContent = "🌙";
+          themeLabel.textContent = "Dark mode";
+        }
+      }
+
+      function setTheme(theme) {
+        document.body.dataset.theme = theme;
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+        updateThemeToggle(theme);
+      }
+
+      function initializeTheme() {
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        const initialTheme = savedTheme === "dark" ? "dark" : "light";
+        document.body.dataset.theme = initialTheme;
+        updateThemeToggle(initialTheme);
       }
     }
 
@@ -238,6 +269,13 @@ document.addEventListener("DOMContentLoaded", () => {
   loginButton.addEventListener("click", openLoginModal);
   logoutButton.addEventListener("click", logout);
   closeLoginModal.addEventListener("click", closeLoginModalHandler);
+
+  if (themeToggleButton) {
+    themeToggleButton.addEventListener("click", () => {
+      const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(nextTheme);
+    });
+  }
 
   // Close login modal when clicking outside
   window.addEventListener("click", (event) => {
@@ -862,6 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Initialize app
+  initializeTheme();
   checkAuthentication();
   initializeFilters();
   fetchActivities();
