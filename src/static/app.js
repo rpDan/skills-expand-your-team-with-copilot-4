@@ -315,20 +315,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
-  function escapeHtml(value) {
-    return value.replace(/[&<>"']/g, (character) => {
-      const entities = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      };
-
-      return entities[character];
-    });
-  }
-
   function getActivityShareUrl(activityName) {
     const shareUrl = new URL(window.location.href);
     shareUrl.search = "";
@@ -387,6 +373,76 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Unable to copy the share link. Please try again.", "error");
       console.error("Error copying share link:", error);
     }
+  }
+
+  function createNoResultsState(message) {
+    const emptyState = document.createElement("div");
+    emptyState.className = "no-results";
+
+    const title = document.createElement("h4");
+    title.textContent = "No activities found";
+
+    const description = document.createElement("p");
+    description.textContent = message;
+
+    emptyState.appendChild(title);
+    emptyState.appendChild(description);
+    return emptyState;
+  }
+
+  function createShareButton(activityName, platform, label, ariaLabel, extraClass = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `share-button ${extraClass}`.trim();
+    button.dataset.activity = activityName;
+    button.dataset.platform = platform;
+    button.textContent = label;
+    button.setAttribute("aria-label", ariaLabel);
+    button.addEventListener("click", handleShareAction);
+    return button;
+  }
+
+  function createShareActions(activityName) {
+    const shareActions = document.createElement("div");
+    shareActions.className = "share-actions";
+    shareActions.setAttribute("role", "group");
+    shareActions.setAttribute("aria-label", `Share ${activityName}`);
+
+    const shareLabel = document.createElement("span");
+    shareLabel.className = "share-label";
+    shareLabel.textContent = "Share:";
+
+    shareActions.appendChild(shareLabel);
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "facebook",
+        "Facebook",
+        `Share ${activityName} on Facebook`
+      )
+    );
+    shareActions.appendChild(
+      createShareButton(activityName, "x", "X", `Share ${activityName} on X`)
+    );
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "email",
+        "Email",
+        `Share ${activityName} by email`
+      )
+    );
+    shareActions.appendChild(
+      createShareButton(
+        activityName,
+        "copy",
+        "Copy Link",
+        `Copy share link for ${activityName}`,
+        "share-button-secondary"
+      )
+    );
+
+    return shareActions;
   }
 
   function handleShareAction(event) {
@@ -562,15 +618,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (Object.keys(filteredActivities).length === 0) {
       const emptyStateMessage =
         sharedActivityName && searchQuery === sharedActivityName
-        ? `Try searching for "${escapeHtml(sharedActivityName)}" in a different filter view.`
+        ? `Try searching for "${sharedActivityName}" in a different filter view.`
         : "Try adjusting your search or filter criteria";
 
-      activitiesList.innerHTML = `
-        <div class="no-results">
-          <h4>No activities found</h4>
-          <p>${emptyStateMessage}</p>
-        </div>
-      `;
+      activitiesList.appendChild(createNoResultsState(emptyStateMessage));
       return;
     }
 
@@ -660,21 +711,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
-      <div class="share-actions" role="group" aria-label="Share ${name}">
-        <span class="share-label">Share:</span>
-        <button class="share-button" data-activity="${name}" data-platform="facebook" type="button" aria-label="Share ${name} on Facebook">
-          Facebook
-        </button>
-        <button class="share-button" data-activity="${name}" data-platform="x" type="button" aria-label="Share ${name} on X">
-          X
-        </button>
-        <button class="share-button" data-activity="${name}" data-platform="email" type="button" aria-label="Share ${name} by email">
-          Email
-        </button>
-        <button class="share-button share-button-secondary" data-activity="${name}" data-platform="copy" type="button" aria-label="Copy share link for ${name}">
-          Copy Link
-        </button>
-      </div>
       <div class="activity-card-actions">
         ${
           currentUser
@@ -700,10 +736,9 @@ document.addEventListener("DOMContentLoaded", () => {
       button.addEventListener("click", handleUnregister);
     });
 
-    const shareButtons = activityCard.querySelectorAll(".share-button");
-    shareButtons.forEach((button) => {
-      button.addEventListener("click", handleShareAction);
-    });
+    const shareActions = createShareActions(name);
+    const activityActions = activityCard.querySelector(".activity-card-actions");
+    activityActions.before(shareActions);
 
     // Add click handler for register button (only when authenticated)
     if (currentUser) {
