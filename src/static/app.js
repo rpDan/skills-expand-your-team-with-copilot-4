@@ -149,7 +149,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
           console.warn("Could not read saved theme preference:", error);
         }
-        const initialTheme = savedTheme === "dark" ? "dark" : "light";
+        const prefersDarkMode =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const initialTheme =
+          savedTheme === "dark" || (savedTheme !== "light" && prefersDarkMode)
+            ? "dark"
+            : "light";
         document.body.dataset.theme = initialTheme;
         updateThemeToggle(initialTheme);
       }
