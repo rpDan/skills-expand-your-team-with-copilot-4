@@ -316,9 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getActivityShareUrl(activityName) {
-    const shareUrl = new URL(window.location.href);
-    shareUrl.search = "";
-    shareUrl.hash = "";
+    const shareUrl = new URL("/static/index.html", window.location.origin);
     shareUrl.searchParams.set("activity", activityName);
     return shareUrl.toString();
   }
@@ -738,7 +736,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const shareActions = createShareActions(name);
     const activityActions = activityCard.querySelector(".activity-card-actions");
-    activityActions.before(shareActions);
+    if (activityActions) {
+      activityActions.before(shareActions);
+    } else {
+      activityCard.appendChild(shareActions);
+    }
 
     // Add click handler for register button (only when authenticated)
     if (currentUser) {
