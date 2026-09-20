@@ -73,10 +73,14 @@ document.addEventListener("DOMContentLoaded", () => {
     sharedActivityName = urlParams.get("activity") || "";
 
     if (sharedActivityName) {
-      searchQuery = sharedActivityName;
-      searchInput.value = sharedActivityName;
-      isSharedActivityPrefillActive = true;
+      updateSearchQuery(sharedActivityName, true);
     }
+  }
+
+  function updateSearchQuery(value, keepSharedPrefillActive = false) {
+    searchInput.value = value;
+    searchQuery = value;
+    isSharedActivityPrefillActive = keepSharedPrefillActive;
   }
 
   // Function to set day filter
@@ -318,8 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getActivityShareUrl(activityName) {
-    const shareUrl = new URL(window.location.href);
-    shareUrl.hash = "";
+    const shareUrl = new URL(window.location.pathname, window.location.origin);
     shareUrl.searchParams.set("activity", activityName);
     return shareUrl.toString();
   }
@@ -399,7 +402,6 @@ document.addEventListener("DOMContentLoaded", () => {
     button.dataset.platform = platform;
     button.textContent = label;
     button.setAttribute("aria-label", ariaLabel);
-    button.addEventListener("click", handleShareAction);
     return button;
   }
 
@@ -446,8 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return shareActions;
   }
 
-  function handleShareAction(event) {
-    const { activity, platform } = event.currentTarget.dataset;
+  function handleShareAction(shareButton) {
+    const { activity, platform } = shareButton.dataset;
     const activityDetails = allActivities[activity];
 
     if (!activityDetails) {
@@ -761,16 +763,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event listeners for search and filter
   searchInput.addEventListener("input", (event) => {
-    searchQuery = event.target.value;
-    isSharedActivityPrefillActive = false;
+    updateSearchQuery(event.target.value);
     displayFilteredActivities();
   });
 
   searchButton.addEventListener("click", (event) => {
     event.preventDefault();
-    searchQuery = searchInput.value;
-    isSharedActivityPrefillActive = false;
+    updateSearchQuery(searchInput.value);
     displayFilteredActivities();
+  });
+
+  activitiesList.addEventListener("click", (event) => {
+    const shareButton = event.target.closest(".share-button");
+    if (!shareButton || !activitiesList.contains(shareButton)) {
+      return;
+    }
+
+    handleShareAction(shareButton);
   });
 
   // Add event listeners to category filter buttons
