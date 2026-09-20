@@ -178,9 +178,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       function setTheme(theme) {
-        followsSystemTheme = false;
-        removeSystemThemeListener();
         applyTheme(theme);
+        removeSystemThemeListener();
+
+        const systemTheme =
+          prefersDarkMediaQuery && prefersDarkMediaQuery.matches ? "dark" : "light";
+
+        if (prefersDarkMediaQuery && theme === systemTheme) {
+          followsSystemTheme = true;
+          addSystemThemeListener();
+          try {
+            localStorage.removeItem(THEME_STORAGE_KEY);
+          } catch (error) {
+            console.warn("Could not clear theme preference:", error);
+          }
+          return;
+        }
+
+        followsSystemTheme = false;
         try {
           localStorage.setItem(THEME_STORAGE_KEY, theme);
         } catch (error) {
