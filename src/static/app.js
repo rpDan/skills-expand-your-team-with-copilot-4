@@ -125,10 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
           themeIcon.textContent = "☀️";
           themeLabel.textContent = "Light mode";
           themeToggleButton.setAttribute("aria-pressed", "true");
+          themeToggleButton.setAttribute("aria-label", "Switch to light mode");
         } else {
           themeIcon.textContent = "🌙";
           themeLabel.textContent = "Dark mode";
           themeToggleButton.setAttribute("aria-pressed", "false");
+          themeToggleButton.setAttribute("aria-label", "Switch to dark mode");
         }
       }
 
